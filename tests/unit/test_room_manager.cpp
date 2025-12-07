@@ -1,0 +1,42 @@
+#include <gtest/gtest.h>
+#include "../../src/chats/RoomManager.hpp"
+#include "../test_helpers.hpp"
+
+class RoomManagerTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        manager_ = std::make_unique<RoomManager>();
+    }
+    std::unique_ptr<RoomManager> manager_;
+};
+
+TEST_F(RoomManagerTest, CreateRoom) {
+    manager_->create_room("test", 1);
+    EXPECT_TRUE(manager_->room_exists("test"));
+}
+
+TEST_F(RoomManagerTest, RoomDoesNotExist) {
+    EXPECT_FALSE(manager_->room_exists("nonexistent"));
+}
+
+TEST_F(RoomManagerTest, GetRoom) {
+    manager_->create_room("test", 1);
+    auto room = manager_->get_room("test");
+    ASSERT_NE(room, nullptr);
+}
+
+TEST_F(RoomManagerTest, RemoveRoom) {
+    manager_->create_room("test", 1);
+    manager_->remove_room("test");
+    EXPECT_FALSE(manager_->room_exists("test"));
+}
+
+TEST_F(RoomManagerTest, MultipleRooms) {
+    manager_->create_room("room1", 1);
+    manager_->create_room("room2", 2);
+    manager_->create_room("room3", 3);
+
+    EXPECT_TRUE(manager_->room_exists("room1"));
+    EXPECT_TRUE(manager_->room_exists("room2"));
+    EXPECT_TRUE(manager_->room_exists("room3"));
+}
