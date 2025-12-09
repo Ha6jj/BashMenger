@@ -1,37 +1,39 @@
 #include "MessageRepository.hpp"
 
 #include <algorithm>
-#include <thread>
-#include <stdexcept>
 
-void MessageRepository::add_message(const std::string& sender, const std::string& content)
+void MessageRepository::add_message(const user_id_t& sender_id, const std::string& content)
 {
-    uint64_t new_id = next_message_id_.fetch_add(1, std::memory_order_relaxed);
-    StoredMessage new_msg{
+    auto now = std::chrono::system_clock::now();
+    std::unique_lock lock(messages_mtx_);
+
+    uint64_t new_id = next_message_id_++;
+    
+    messages_.push_back(StoredMessage{
         new_id,
-        sender,
+        sender_id,
         content,
-        std::chrono::system_clock::now()
-    };
+        now
+    });
 
+    latest_message_id_.store(new_id, std::memory_order_release);
+
+    if (messages_.size() > TRIM_THRESHOLD)
     {
-        std::lock_guard lock(messages_mtx_);
-        messages_.push_back(std::move(new_msg));
-        latest_message_id_.store(new_id, std::memory_order_release);
+        trim_old_messages_impl(lock);
     }
-
-    maybe_trim_old_messages();
 }
 
-std::vector<StoredMessage> MessageRepository::get_missed_messages(const std::string& username)
+std::vector<StoredMessage> MessageRepository::get_missed_messages(const user_id_t& user_id)
 {
-    uint64_t last_read_id;
+    uint64_t last_read_id = 0;
     {
-        std::shared_lock lock(users_mtx_);
-        last_read_id = get_last_read_id(username);
+        std::shared_lock user_lock(users_mtx_);
+        last_read_id = get_last_read_id(user_id);
     }
 
-    std::shared_lock lock(messages_mtx_);
+    std::shared_lock msg_lock(messages_mtx_);
+    
     auto it = std::lower_bound(messages_.begin(), messages_.end(), last_read_id,
         [](const StoredMessage& msg, uint64_t id)
         {
@@ -40,10 +42,10 @@ std::vector<StoredMessage> MessageRepository::get_missed_messages(const std::str
     return std::vector<StoredMessage>(it, messages_.end());
 }
 
-void MessageRepository::mark_as_read(const std::string& username, uint64_t last_read_id)
+void MessageRepository::mark_as_read(const user_id_t& user_id, uint64_t last_read_id)
 {
-    std::lock_guard lock(users_mtx_);
-    auto& current_id = last_read_index_[username];
+    std::unique_lock lock(users_mtx_);
+    auto& current_id = last_read_index_[user_id];
     if (last_read_id > current_id)
     {
         current_id = last_read_id;
@@ -55,54 +57,30 @@ uint64_t MessageRepository::get_latest_message_id() const noexcept
     return latest_message_id_.load(std::memory_order_acquire);
 }
 
-uint64_t MessageRepository::get_last_read_id(const std::string& username) const
+uint64_t MessageRepository::get_last_read_id(const user_id_t& user_id) const
 {
-    auto it = last_read_index_.find(username);
+    auto it = last_read_index_.find(user_id);
     return (it != last_read_index_.end()) ? it->second : 0;
 }
 
-void MessageRepository::maybe_trim_old_messages()
+void MessageRepository::trim_old_messages_impl(std::unique_lock<std::shared_mutex>& message_lock)
 {
-    size_t current_size;
-    {
-        std::shared_lock lock(messages_mtx_);
-        current_size = messages_.size();
-    }
-    if (current_size <= TRIM_THRESHOLD) return;
+    if (messages_.size() <= MAX_STORED_MESSAGES) return;
 
-    std::thread([this] {
-        trim_old_messages_impl();
-    }).detach();
-}
+    size_t trim_count = messages_.size() - MAX_STORED_MESSAGES;
+    uint64_t oldest_surviving_id = messages_[trim_count].id;
+    messages_.erase(messages_.begin(), messages_.begin() + trim_count);
 
-void MessageRepository::trim_old_messages_impl()
-{
-    uint64_t oldest_surviving_id = 0;
-    {
-        std::lock_guard lock(messages_mtx_);
-        if (messages_.size() <= MAX_STORED_MESSAGES) return;
-        
-        size_t trim_pos = messages_.size() - MAX_STORED_MESSAGES;
-        oldest_surviving_id = messages_[trim_pos].id;
-        
-        messages_.erase(messages_.begin(), messages_.begin() + trim_pos);
-        
-        if (!messages_.empty())
-        {
-            latest_message_id_.store(messages_.back().id, std::memory_order_release);
-        }
-        else
-        {
-            latest_message_id_.store(0, std::memory_order_release);
-        }
-    }
+    message_lock.unlock();
 
-    std::lock_guard lock(users_mtx_);
-    for (auto& [user, last_id] : last_read_index_)
     {
-        if (last_id < oldest_surviving_id)
+        std::unique_lock user_lock(users_mtx_);
+        for (auto& [user, last_id] : last_read_index_)
         {
-            last_id = oldest_surviving_id;
+            if (last_id < oldest_surviving_id)
+            {
+                last_id = oldest_surviving_id;
+            }
         }
     }
 }

@@ -2,10 +2,19 @@
 
 #include <sstream>
 #include <iomanip>
+#include <vector>
 
 void ChatRoom::broadcast(const std::string& message, std::shared_ptr<Client> except_part)
 {
-    for (auto& participant : participants)
+    std::vector<std::shared_ptr<Client>> sessions_snapshot;
+
+    {
+        std::shared_lock lock(mtx_);
+        sessions_snapshot.reserve(current_sessions.size());
+        sessions_snapshot.insert(sessions_snapshot.end(), current_sessions.begin(), current_sessions.end());
+    }
+
+    for (auto& participant : sessions_snapshot)
     {
         if (participant != except_part)
         {
@@ -14,71 +23,107 @@ void ChatRoom::broadcast(const std::string& message, std::shared_ptr<Client> exc
     }
 }
 
-void ChatRoom::submit_message(std::shared_ptr<Client> sender, const std::string& message)
+void ChatRoom::submit_message(const std::string& message, std::shared_ptr<Client> sender)
 {
-    _repo.add_message(sender->get_nickname(), message);
-    std::string formatted_msg = sender->get_nickname() + ": " + message + "\n\r";
-    broadcast(formatted_msg);
-}
-
-void ChatRoom::join_participant(std::shared_ptr<Client> participant)
-{
-    if (!is_member(participant->get_uid()))
+    if (!is_member(sender->get_uid()))
     {
-        participants.insert(participant);
-        broadcast("Participant joined: " + participant->get_nickname() + "\n\r", participant);
-
-        auto missed_messages = _repo.get_missed_messages(participant->get_nickname());
-        if (!missed_messages.empty()) {
-            participant->deliver_to_client("--- History ---\n\r");
-            for (const auto& msg : missed_messages)
-            {
-                auto time_t = std::chrono::system_clock::to_time_t(msg.timestamp);
-                std::stringstream ss;
-                ss << "[" << std::put_time(std::localtime(&time_t), "%H:%M") << "] " 
-                   << msg.sender << ": " << msg.content << "\n\r";
-                
-                participant->deliver_to_client(ss.str());
-            }
-            participant->deliver_to_client("----------------\n\r");
-        }
-
-        _repo.mark_as_read(participant->get_nickname(), _repo.get_latest_message_id());
+        sender->deliver_to_client("You aren't member of this chat: " + room_name + "\n\r");
+        return;
     }
-    else
+
+    _repo.add_message(sender->get_uid(), message);
+
+    std::string formatted_msg = get_nickname(sender->get_uid()) + ": " + message + "\n\r";
+    broadcast(formatted_msg, sender);
+
+    std::vector<std::shared_ptr<Client>> sessions_snapshot;
     {
-        participant->deliver_to_client("You are already member of chat: " + room_name + "\n\r");
+        std::shared_lock lock(mtx_);
+        sessions_snapshot.insert(sessions_snapshot.end(), current_sessions.begin(), current_sessions.end());
+    }
+
+    for (auto& participant : sessions_snapshot)
+    {
+        _repo.mark_as_read(participant->get_uid(), _repo.get_latest_message_id());
     }
 }
 
-void ChatRoom::leave_participant(std::shared_ptr<Client> participant)
+void ChatRoom::get_history(std::shared_ptr<Client> sender)
 {
-    if (is_member(participant->get_uid()))
+    if (!is_member(sender->get_uid()))
     {
-        _repo.mark_as_read(participant->get_nickname(), _repo.get_latest_message_id());
-
-        participants.erase(participant);
-        broadcast("Participant left: " + participant->get_nickname() + "\n\r", participant);
+        sender->deliver_to_client("You aren't member of this chat: " + room_name + "\n\r");
+        return;
     }
-    else
-    {
-        participant->deliver_to_client("You aren't member of this chat: " + room_name + "\n\r");
-    }
-}
 
-bool ChatRoom::is_admin(USER_ID_T participant_id) const
-{
-    return _admin_uid == participant_id;
-}
-
-bool ChatRoom::is_member(USER_ID_T user_uid) const
-{
-    for (auto& chat_participant : participants)
-    {
-        if (user_uid == chat_participant->get_uid())
+    auto missed_messages = _repo.get_missed_messages(sender->get_uid());
+    if (!missed_messages.empty()) {
+        sender->deliver_to_client("--- History ---\n\r");
+        for (const auto& msg : missed_messages)
         {
-            return true;
+            auto time_t = std::chrono::system_clock::to_time_t(msg.timestamp);
+            std::stringstream ss;
+            ss << "[" << std::put_time(std::localtime(&time_t), "%H:%M") << "] " 
+               << get_nickname(msg.sender_id) << ": " << msg.content << "\n\r";
+                
+            sender->deliver_to_client(ss.str());
         }
+        sender->deliver_to_client("----------------\n\r");
     }
-    return false;
+
+    _repo.mark_as_read(sender->get_uid(), _repo.get_latest_message_id());
+}
+
+void ChatRoom::join_participant(std::shared_ptr<Client> sender)
+{
+    user_id_t uid = sender->get_uid();
+    {
+        std::unique_lock lock(mtx_);
+        members.insert(uid);   
+    }
+
+    add_new_session(sender);
+    broadcast("Participant joined: " + get_nickname(uid) + "\n\r", sender);
+}
+
+void ChatRoom::leave_participant(std::shared_ptr<Client> sender)
+{   
+    user_id_t uid = sender->get_uid();
+    {
+        std::unique_lock lock(mtx_);
+        members.erase(uid);
+    }
+
+    remove_session(sender);
+    broadcast("Participant left: " + get_nickname(uid) + "\n\r", sender);
+}
+
+void ChatRoom::add_new_session(std::shared_ptr<Client> sender)
+{
+    std::unique_lock lock(mtx_);
+    current_sessions.insert(sender);
+}
+
+void ChatRoom::remove_session(std::shared_ptr<Client> sender)
+{
+    std::unique_lock lock(mtx_);
+    current_sessions.erase(sender);
+}
+
+bool ChatRoom::is_admin(user_id_t sender_id) const
+{
+    std::shared_lock lock(mtx_); 
+    return _admin_uid == sender_id;
+}
+
+bool ChatRoom::is_member(user_id_t user_uid) const
+{
+    std::shared_lock lock(mtx_);
+    return members.find(user_uid) != members.end();
+}
+
+std::string ChatRoom::get_nickname(const user_id_t user_id) const
+{
+    auto nickname = _user_data.get_nickname(user_id);
+    return nickname.value_or("Undefined user");
 }

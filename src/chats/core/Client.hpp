@@ -2,6 +2,9 @@
 
 #include <boost/asio.hpp>
 
+#include "Types.hpp"
+
+#include <shared_mutex>
 #include <queue>
 #include <string>
 
@@ -37,21 +40,18 @@ private:
     error_handler _on_error;
 };
 
-typedef uint32_t USER_ID_T;
-
 class Client : public Session
 {
 public:
     Client(tcp::socket&& socket) : Session(std::move(socket)) {}
 
-    void authorize(const std::string& nickname);
-    
+    void authorize(const user_id_t id);
     bool is_authorized() const;
-    USER_ID_T get_uid() const;
-    std::string get_nickname() const;
+    user_id_t get_uid() const;
 
 private:
+    mutable std::shared_mutex auth_mutex;
+
     bool authorized = false;
-    USER_ID_T uid;
-    std::string _nickname;
+    user_id_t uid;
 };

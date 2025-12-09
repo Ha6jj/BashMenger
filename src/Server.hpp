@@ -7,7 +7,7 @@
 class Server
 {
 public:
-    Server(io::io_context& io_context, std::uint16_t port, RoomManager& room_manager);
+    Server(io::io_context& io_context, std::uint16_t port);
 
     void async_accept();
 

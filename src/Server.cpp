@@ -1,8 +1,7 @@
 #include "Server.hpp"
 
-Server::Server(io::io_context& io_context, std::uint16_t port, RoomManager& room_manager)
-    : _io_context(io_context), _acceptor(io_context, tcp::endpoint(tcp::v4(), port)), 
-    command_handler(room_manager) {}
+Server::Server(io::io_context& io_context, std::uint16_t port)
+    : _io_context(io_context), _acceptor(io_context, tcp::endpoint(tcp::v4(), port)) {}
 
 void Server::async_accept()
 {
@@ -18,10 +17,10 @@ void Server::async_accept()
                 std::bind(&Server::client_handler, this, _1, _2),
                 [&, weak = std::weak_ptr(client)]
                 {
-                    if (auto shared = weak.lock(); shared && clients.erase(shared))
+                    if (auto shared = weak.lock())
                     {
-                        // broadcast
-                        // remove from rooms
+                        command_handler.remove_sessions(shared);
+                        clients.erase(shared);
                     }
                 }
 

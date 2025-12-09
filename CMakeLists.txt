@@ -9,6 +9,7 @@ find_package(Boost 1.74.0 REQUIRED COMPONENTS system)
 set(SOURCE_DIR src)
 set(BSOURCES 
     ${SOURCE_DIR}/chats/core/Client.cpp
+    ${SOURCE_DIR}/chats/core/UserDataRepository.cpp
     ${SOURCE_DIR}/chats/MessageRepository.cpp
     ${SOURCE_DIR}/chats/ChatRoom.cpp
     ${SOURCE_DIR}/chats/RoomManager.cpp

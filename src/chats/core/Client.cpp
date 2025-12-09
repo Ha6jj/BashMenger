@@ -71,26 +71,21 @@ void Session::on_write(error_code error, std::size_t bytes)
 
 // Client
 
-static USER_ID_T users_count = 0;
-
-void Client::authorize(const std::string& nickname)
+void Client::authorize(const user_id_t id)
 {
-    _nickname = nickname;
+    std::lock_guard lock(auth_mutex);
     authorized = true;
-    uid = users_count++;
+    uid = id;
 }
 
 bool Client::is_authorized() const
 {
+    std::lock_guard lock(auth_mutex);
     return authorized;
 }
 
-USER_ID_T Client::get_uid() const
+user_id_t Client::get_uid() const
 {
+    std::lock_guard lock(auth_mutex);
     return uid;
-}
-
-std::string Client::get_nickname() const
-{
-    return _nickname;
 }
