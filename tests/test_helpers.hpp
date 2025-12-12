@@ -12,7 +12,7 @@ class TestClient : public Client {
 public:
     TestClient() : Client(tcp::socket(io_context_)) {}
 
-    void deliver_to_client(const std::string& msg) override {
+    void deliver_to_client(const std::string& msg) {
         messages_.push_back(msg);
     }
 
