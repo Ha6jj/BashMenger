@@ -24,7 +24,7 @@ public:
     virtual ~Session() = default; 
 
     void start(message_handler_impl&& on_mesage, error_handler&& on_error);
-    void deliver_to_client(const std::string& message);
+    virtual void deliver_to_client(const std::string& message);
 
 private:
     void async_read();
