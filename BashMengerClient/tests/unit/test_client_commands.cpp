@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Client.h"
+#include "../../src/Client.h"
 
 class ClientCommandsTest : public ::testing::Test {
 protected:

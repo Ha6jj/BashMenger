@@ -13,13 +13,16 @@ else()
     find_package(Boost REQUIRED COMPONENTS system)
 endif()
 
-add_executable(client
+set(SOURCE_DIR src)
+set(CLIENT_SOURCES
+        ${SOURCE_DIR}/Client.h
+        ${SOURCE_DIR}/Client.cpp
+        ${SOURCE_DIR}/UI.h
+        ${SOURCE_DIR}/UI.cpp
         main.cpp
-        Client.h
-        Client.cpp
-        UI.h
-        UI.cpp
 )
+
+add_executable(client ${CLIENT_SOURCES})
 
 if(WIN32)
     target_link_libraries(client PRIVATE ws2_32 Mswsock)

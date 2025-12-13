@@ -1,20 +1,17 @@
 cmake_minimum_required(VERSION 3.14)
 
-# Отключаем ненужные таргеты Google Test
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
-# Google Test
 include(FetchContent)
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-# Boost
 if(APPLE)
     include_directories(/opt/homebrew/include)
 elseif(WIN32)
@@ -29,33 +26,32 @@ if(WIN32)
     set(MSWSOCK Mswsock)
 endif()
 
-# Исходники клиента
+# Исходники клиента - ОБНОВЛЁННЫЙ ПУТЬ
 set(CLIENT_SOURCES
-        ../Client.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/Client.cpp
 )
 
-# Тесты
 set(TEST_SOURCES
-    main.cpp
-    unit/test_client_setters.cpp
+        main.cpp
+        unit/test_client_setters.cpp
         unit/test_client_commands.cpp
         unit/test_client_state.cpp
 )
 
 add_executable(client_tests
-    ${CLIENT_SOURCES}
-    ${TEST_SOURCES}
+        ${CLIENT_SOURCES}
+        ${TEST_SOURCES}
 )
 
 target_include_directories(client_tests PRIVATE
-        ..
-    ${Boost_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src
+        ${Boost_INCLUDE_DIRS}
 )
 
-target_link_libraries(client_tests 
-    GTest::gtest_main
-    ${WS2_LIB}
-    ${MSWSOCK}
+target_link_libraries(client_tests
+        GTest::gtest_main
+        ${WS2_LIB}
+        ${MSWSOCK}
 )
 
 if(NOT WIN32)

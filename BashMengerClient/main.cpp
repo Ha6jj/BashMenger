@@ -1,5 +1,5 @@
 #include <iostream>
-#include "UI.h"
+#include "src/UI.h"
 
 int main() {
     UI window;
