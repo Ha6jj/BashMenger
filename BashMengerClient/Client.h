@@ -60,6 +60,23 @@ public:
 
     std::string get_history();
 
+    // Методы для тестирования
+    std::string format_auth_command() const;
+
+    std::string format_register_command() const;
+
+    std::string format_join_room_command() const;
+
+    std::string format_leave_room_command() const;
+
+    std::string format_create_room_command() const;
+
+    std::string format_delete_room_command() const;
+
+    std::string format_message_command(const std::string& message) const;
+
+    bool is_connected() const;
+
 private:
     std::string server_ip;
     std::string server_port;
