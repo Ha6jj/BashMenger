@@ -1,0 +1,23 @@
+All commands:
+  help - open this page
+  h - open this page
+  q - close the app
+  i - open chat page
+  ip <ip to connect> - add new ip to your client. Example: 127.0.0.1
+  port <port to connect> - add new port to your client. Example: 8080
+  room <room name to connect> - add new room to your client. Example: cppPractise
+  name <login to connect with> - add new login to your client. Example: Sasha
+  pass <password to connect with> - add new password to your client. Example: 6Hel7llo
+  connect - connects to the server with your port and ip
+  register - makes new account on server with your name and password
+  auth - enters the account with your name and password
+  join - enters the chat-room with your room name
+  leave - leaves the chat-room with your room name
+  disconnect - disconnects from the server with your ip and port
+  delete - deletes chat-room with your room name
+  create - creates a new room with your room name
+  prefs - open Pref page
+  p - open Pref page
+
+[most commands use presaved name, password, ip, port and room name]
+press ESC to leave
