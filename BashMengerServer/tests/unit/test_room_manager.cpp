@@ -60,9 +60,15 @@ TEST_F(RoomManagerTest, MultipleRooms) {
 
 TEST_F(RoomManagerTest, CreateDuplicateRoom) {
     manager_->create_room("test", 1);
-    manager_->create_room("test", 2);  // Попытка создать дубликат
-    
+
+    // Ожидаем что выбросится исключение
+    EXPECT_THROW(
+        manager_->create_room("test", 2),
+        std::runtime_error  // Или std::exception
+    );
+
+    // Проверяем что первая комната осталась
     auto room = manager_->get_room("test");
     ASSERT_NE(room, nullptr);
-    EXPECT_TRUE(room->is_admin(1));  // Админ первый, не второй
+    EXPECT_TRUE(room->is_admin(1));  // Админ первый
 }
