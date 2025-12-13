@@ -31,13 +31,15 @@ endif()
 
 # Исходники клиента
 set(CLIENT_SOURCES
-    ../Client.cpp
+        ../Client.cpp
 )
 
 # Тесты
 set(TEST_SOURCES
     main.cpp
     unit/test_client_setters.cpp
+        unit/test_client_commands.cpp
+        unit/test_client_state.cpp
 )
 
 add_executable(client_tests
@@ -45,8 +47,8 @@ add_executable(client_tests
     ${TEST_SOURCES}
 )
 
-target_include_directories(client_tests PRIVATE 
-    ${CMAKE_SOURCE_DIR}
+target_include_directories(client_tests PRIVATE
+        ..
     ${Boost_INCLUDE_DIRS}
 )
 
