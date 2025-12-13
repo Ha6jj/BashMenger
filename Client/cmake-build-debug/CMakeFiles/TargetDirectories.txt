@@ -1,3 +1,0 @@
-/Users/feliksrogachev/CLionProjects/BashMenger/BashMengerClient/cmake-build-debug/CMakeFiles/BashMangerClient.dir
-/Users/feliksrogachev/CLionProjects/BashMenger/BashMengerClient/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/feliksrogachev/CLionProjects/BashMenger/BashMengerClient/cmake-build-debug/CMakeFiles/rebuild_cache.dir
