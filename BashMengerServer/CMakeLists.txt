@@ -39,3 +39,8 @@ if(WIN32)
 else()
     target_link_libraries(server PRIVATE Boost::system pthread)
 endif()
+
+# Тесты
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+    add_subdirectory(tests)
+endif()

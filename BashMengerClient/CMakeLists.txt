@@ -26,3 +26,8 @@ if(WIN32)
 else()
     target_link_libraries(client PRIVATE pthread)
 endif()
+
+# Тесты
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+    add_subdirectory(tests)
+endif()
