@@ -4,5 +4,5 @@ project(BashMenger)
 set(CMAKE_CXX_STANDARD 17)
 
 # Подпроекты
-add_subdirectory(BashMengerServer)
-add_subdirectory(BashMengerClient)
+add_subdirectory(Server)
+add_subdirectory(Client)
